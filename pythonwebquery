@@ -1,0 +1,67 @@
+from dbconfig import *
+import pymysql
+import cgi
+import cgitb
+cgitb.enable()
+
+db = get_mysql_param()
+cnx = pymysql.connect(user=db['user'],
+                      password=db['password'],
+                      host=db['host'],
+                      database=db['database'])
+
+cursor = cnx.cursor()
+
+print("Content-Type: text/html;charset=utf-8")
+print()
+
+print ('''<html>
+<head></head>
+<body>
+''')
+
+
+form = cgi.FieldStorage()
+sid = form.getfirst('sid')
+
+if sid is None:
+    print('<h3>Levels With Swimmers:</h3>')
+    query = '''
+SELECT DISTINCT l.LevelId, l.Level,
+    COUNT(s.SwimmerId) AS total,
+	GROUP_CONCAT(CONCAT('   <li><a href="?sid=', s.SwimmerId, '">',
+	s.Fname, ' ', s.Lname, '</a>', ': past level since: ',lh.StartDate, '</li>') SEPARATOR '')
+	AS level_swimmer
+FROM Level AS l
+INNER JOIN levelhistory AS lh ON (l.LevelId = lh.LevelId)
+INNER JOIN Swimmer AS s ON (s.SwimmerId = lh.SwimmerId)
+GROUP BY l.LevelId;
+'''
+    cursor.execute(query)
+    for (lId, level, total, swimmer) in cursor:
+        print ('</li>Level # ' + str(lId) + ' (' + level + '): '+ str(total) + ' achieved: '+'<ul>')
+        print ('</ul></li> ' '<ol>')
+        print (swimmer)
+    print('<ol>')
+    print('<body><html>')
+    cursor.close()
+    cnx.close()
+    quit()
+else:
+    query = '''
+    SELECT s.Lname, s.Fname,
+    group_concat('<li>', m.title,': ',e.title,'</li>'),
+    count(*) FROM Swimmer s
+    INNER JOIN Participation p ON p.SwimmerId = s.SwimmerId
+    INNER JOIN Event e ON e.EventId = p.EventId
+    INNER JOIN Meet m ON m.MeetId = e.MeetId
+    WHERE s.SwimmerId = %s GROUP BY p.SwimmerId;
+'''
+    cursor.execute(query,(int(sid)))
+    (lname, fname, participate, count) = cursor.fetchone()
+    print('<p>Swimmer #' + str(sid) + ' Participated in ' + str(count) + ' events.')
+    print('<ol>'+participate+'</ol>')
+cursor.close()
+cnx.close()
+print ('''</body>
+</html>''')
