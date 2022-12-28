@@ -1,0 +1,79 @@
+1
+SELECT DISTINCT Swimmer.LName, Swimmer.FName, Swimmer.Phone, Swimmer.JoinTime
+FROM Swimmer
+WHERE Swimmer.JoinTime BETWEEN '2014-00-00' AND '2017-00-00';
+
+
+2
+SELECT DISTINCT Swimmer.LName, Swimmer.FName
+FROM Swimmer
+INNER JOIN Caretaker ON Caretaker.CT_Id = Swimmer.SwimmerId
+WHERE Swimmer.LName = Caretaker.lName
+
+
+3
+SELECT DISTINCT Swimmer.LName, Swimmer.FName, Level.Level, Meet.Title AS meet,Event.Title AS event
+FROM Swimmer
+INNER JOIN level ON Swimmer.CurrentLevelId = Level.LevelId
+INNER JOIN Participation ON Swimmer.SwimmerId = Participation.SwimmerId
+INNER JOIN Event ON Event.EventId = Participation.EventId
+INNER JOIN Meet ON Meet.MeetId = Event.MeetId
+WHERE Event.Title LIKE '%Freestyle%'
+
+4 
+SELECT DISTINCT Swimmer.FName, Swimmer.LName
+FROM Swimmer
+INNER JOIN Participation p1 ON Swimmer.SwimmerId = p1.SwimmerId
+INNER JOIN Participation p2 ON Swimmer.SwimmerId = p2.SwimmerId
+WHERE p1.EventId = 1
+AND p2.EventId = 9
+
+5
+WITH t1 AS (SELECT DISTINCT CONCAT(Swimmer.FName, ' ', Swimmer.LName) AS Swimmer, Swimmer.FName AS name, Swimmer.lName AS fname
+FROM Swimmer
+INNER JOIN Participation ON Participation.SwimmerId = Swimmer.SwimmerId
+INNER JOIN Event ON Event.EventId = Participation.EventId
+INNER JOIN Meet ON Meet.MeetId = Event.MeetId
+WHERE Meet.MeetId = 1),
+t2 AS (SELECT CONCAT(Swimmer.FName, ' ', Swimmer.LName) AS Swimmer
+FROM Swimmer
+INNER JOIN Participation ON Participation.SwimmerId = Swimmer.SwimmerId
+INNER JOIN Event ON Event.EventId = Participation.EventId
+INNER JOIN Meet ON Meet.MeetId = Event.MeetId
+WHERE Meet.MeetId = 3)
+
+SELECT t1.name, t1.fname
+FROM t1
+    LEFT JOIN t2 ON (t1.Swimmer = t2.Swimmer)
+WHERE t2.Swimmer IS NULL
+
+
+6
+SELECT DISTINCT Event.Title AS "event's distance"
+FROM Event
+
+
+7
+WITH t1 AS (
+SELECT Swimmer.SwimmerId AS PK, COUNT(Participation.Result) AS wins
+FROM Swimmer
+INNER JOIN Participation ON Participation.SwimmerId = Swimmer.SwimmerId
+WHERE Participation.Result = 'winner'
+GROUP BY Swimmer.SwimmerId
+)
+SELECT DISTINCT CONCAT(Swimmer.FName, ' ', Swimmer.LName) AS Swimmer, IFNULL(t1.wins,0) AS '# wins'
+FROM Swimmer
+LEFT JOIN t1 ON t1.PK = Swimmer.SwimmerId
+LEFT JOIN Participation ON Participation.SwimmerId = t1.PK
+ORDER BY wins DESC
+
+
+8
+SELECT DISTINCT CONCAT(Swimmer.FName, ' ', Swimmer.LName) AS Swimmer, COUNT(Event.Title) AS '# 100M Events'
+FROM Swimmer
+INNER JOIN Participation ON Participation.SwimmerId = Swimmer.SwimmerId
+INNER JOIN Event ON Event.EventId = Participation.EventId
+WHERE Event.Title LIKE '100M%'
+GROUP BY Swimmer
+HAVING COUNT(Participation.SwimmerId)>=2
+ORDER BY COUNT(Participation.SwimmerId) DESC
